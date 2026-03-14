@@ -5,6 +5,7 @@ import { DashboardHeader } from "@/features/dashboard/components/dashboard-heade
 import { LiveTranslationPanel } from "@/features/dashboard/components/live-translation-panel";
 import { TextInputPanel } from "@/features/dashboard/components/text-input-panel";
 import { QuickActionsPanel } from "@/features/dashboard/components/quick-actions-panel";
+import { UserInfoCard } from "@/features/dashboard/components/user-info-card";
 
 export function DashboardView() {
   return (
@@ -15,38 +16,53 @@ export function DashboardView() {
       <PageHeader title="Dashboard" className="lg:hidden" />
 
       <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pb-10 pt-6 lg:px-10 lg:pt-10">
-        {/* Hero row */}
-        <section className="grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2.2fr)] xl:gap-12">
-          <div className="space-y-6">
-            <DashboardHeader />
+        <DashboardHeader />
 
-            {/* Primary text-to-speech entry card */}
-            <div className="rounded-3xl border border-border/70 bg-linear-to-br from-black/70 via-background/95 to-black/80 p-1 shadow-[0_26px_80px_rgba(0,0,0,0.85)]">
-              <div className="rounded-[26px] border border-white/3 bg-[#101010] px-4 py-4 lg:px-6 lg:py-5">
-                <div className="mb-4 flex items-center justify-between gap-4">
+        {/* Hero row: cards aligned from same top */}
+        <section className="grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2.2fr)] xl:gap-12">
+          {/* Left column: TTS card + Live Translation stacked */}
+          <div className="flex flex-col gap-6">
+            {/* Primary text-to-speech card */}
+            <div
+              className="animate-dashboard-card-in rounded-2xl border border-border/60 bg-[#0f0f0f]/95 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]"
+              style={{ animationDelay: "0ms" }}
+            >
+              <div className="px-5 py-5 lg:px-6 lg:py-6">
+                <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground/90">
                       Text to speech
                     </p>
-                    <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground lg:text-xl">
+                    <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground lg:text-xl">
                       Turn your script into a finished voiceover
                     </h2>
-                    <p className="mt-1.5 text-xs text-muted-foreground lg:text-sm">
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground/90 lg:text-sm">
                       Paste your lines once, pick a voice, and generate studio-grade audio in a single flow.
                     </p>
                   </div>
-                  <span className="hidden rounded-full border border-border/70 bg-background px-3 py-1 text-[11px] font-medium tracking-tight text-muted-foreground/80 lg:inline-flex">
+                  <span className="hidden shrink-0 rounded-full border border-border/50 bg-background/80 px-2.5 py-1 text-[10px] font-medium tracking-wide text-muted-foreground/80 lg:inline-flex">
                     Built for creators
                   </span>
                 </div>
                 <TextInputPanel />
               </div>
             </div>
+
+            {/* Live Translation: directly below TTS */}
+            <div
+              className="animate-dashboard-card-in"
+              style={{ animationDelay: "100ms" }}
+            >
+              <LiveTranslationPanel />
+            </div>
           </div>
 
           {/* Right column: hero media + quick actions */}
-          <div className="space-y-5">
-            <div className="overflow-hidden rounded-3xl border border-border/70 bg-[#111111] shadow-[0_18px_60px_rgba(0,0,0,0.85)]">
+          <div className="flex flex-col gap-5">
+            <div
+              className="animate-dashboard-card-in overflow-hidden rounded-3xl border border-border/70 bg-[#111111] shadow-[0_18px_60px_rgba(0,0,0,0.85)]"
+              style={{ animationDelay: "200ms" }}
+            >
               <div className="relative h-52 w-full overflow-hidden">
                 <Image
                   src="/lexel/dashboard-hero.jpg"
@@ -70,16 +86,27 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-border/70 bg-[#0c0c0c]/90 px-4 py-4 lg:px-5 lg:py-5">
+            <div
+              className="animate-dashboard-card-in rounded-3xl border border-border/70 bg-[#0c0c0c]/90 px-4 py-4 lg:px-5 lg:py-5"
+              style={{ animationDelay: "300ms" }}
+            >
               <QuickActionsPanel />
             </div>
           </div>
         </section>
 
-        {/* Secondary row */}
+        {/* Secondary row: User info (with charts) + Workflow overview */}
         <section className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,2.4fr)_minmax(0,2.6fr)]">
-          <LiveTranslationPanel />
-          <div className="rounded-3xl border border-dashed border-border/70 bg-[#0a0a0a]/90 px-5 py-5">
+          <div
+            className="animate-dashboard-card-in"
+            style={{ animationDelay: "400ms" }}
+          >
+            <UserInfoCard />
+          </div>
+          <div
+            className="animate-dashboard-card-in rounded-2xl border border-border/60 bg-[#0f0f0f]/95 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset] px-5 py-5 lg:px-6 lg:py-6"
+            style={{ animationDelay: "500ms" }}
+          >
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">

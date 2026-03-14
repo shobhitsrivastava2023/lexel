@@ -144,3 +144,53 @@ Procedures use **orgProcedure** (requires Clerk userId + orgId) for dashboard op
 | Billing / subscription / usage | `src/features/billing/`, `src/trpc/routers/billing.ts`, `src/lib/polar.ts` |
 | TTS backend call | `src/lib/chatterbox-client.ts`, types in `src/types/chatterbox-api.d.ts` |
 | DB schema and migrations | `prisma/schema.prisma` |
+
+---
+
+## Recent changes (for context)
+
+Summary of layout, dashboard, and branding changes made to the codebase. Use this when reading context or making further edits.
+
+### Sidebar
+
+- **Sidebar on the right** – `DashboardSidebar` renders `<Sidebar side="right" collapsible="icon">` (in `src/features/dashboard/components/dashboard-sidebar.tsx`). The shared `Sidebar` component in `src/components/ui/sidebar.tsx` supports `side="left" | "right"`.
+- **Content resizes when sidebar opens** – In `src/app/(dashboard)/layout.tsx`, the order is **SidebarInset first, then DashboardSidebar**. That way the sidebar’s “gap” reserves space on the right and the main content shrinks when the sidebar is open instead of being overlayed. Do not revert to Sidebar-then-Inset or the overlay behavior returns.
+
+### Dashboard layout
+
+- **Hero row** – Two columns with `items-start`: **left** = TTS card + Live Translation card stacked (`flex flex-col gap-6`); **right** = Creator tours card + Quick actions card. `DashboardHeader` is full-width **above** this grid so both columns align from the same top.
+- **Secondary row** – **Left** = `UserInfoCard` (usage/activity with Recharts). **Right** = Workflow overview card. Both use the same card style as the TTS card for consistency.
+
+### Dashboard cards (shared style)
+
+Cards that should stay visually consistent use:
+
+- `rounded-2xl border border-border/60 bg-[#0f0f0f]/95 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]`
+- Same typography pattern: small uppercase label (`text-[11px]`, tracking), then title, then muted description.
+
+Used for: TTS card, User Info card, Workflow overview card. Creator tours and Quick actions use slightly different wrappers (`rounded-3xl`, different borders) for hierarchy. Live Translation keeps its own gradient-border card style.
+
+### Text-to-speech card (dashboard home)
+
+- **Single surface** – No nested card-in-card. One outer card; the textarea sits in a simple `rounded-xl border border-white/6` container with `focus-within:border-white/10`.
+- **Component** – `src/features/dashboard/components/text-input-panel.tsx`: textarea, estimate badge, character count, and “Generate speech” button. No extra gradient wrapper.
+
+### Live Translation
+
+- **Position** – Rendered **directly below** the TTS card in the left column of the hero row (in `src/features/dashboard/views/dashboard-view.tsx`). No gap between TTS and Live Translation.
+- **Component** – `src/features/dashboard/components/live-translation-panel.tsx`; styling is unchanged (its own gradient border and “Experimental” badge).
+
+### User Info card
+
+- **New component** – `src/features/dashboard/components/user-info-card.tsx`.
+- **Data** – `generations.getAll` and `billing.getStatus` (tRPC). Shows total generations count, estimated cost this period (or “—” when subscription is bypassed), and a Recharts **area chart** for generations per day over the last 7 days.
+- **UI** – Same card style as TTS/Workflow; uses existing `ChartContainer` and Recharts (`AreaChart`, `Area`, `XAxis`, `YAxis`, `CartesianGrid`). Loading state uses `Skeleton`.
+
+### Quick actions card
+
+- **Location** – Bottom of the right column in the hero row, below the Creator tours card. Wrapper: `rounded-3xl border border-border/70 bg-[#0c0c0c]/90`. To make its height match the Live Translation card, give the Quick actions **wrapper** a `min-h-*` that matches the Live Translation card height, or use a CSS grid/flex strategy so both columns in that row share the same height.
+
+### README and branding
+
+- **README.md** – LEXEL-focused: hero image `./public/lexel/logo.jpg`, clone URL `https://github.com/code-with-antonio/lexel.git`, `cd lexel`, tutorial badge link `https://cwa.run/lexel-gh-yt`. No “Resonance” references.
+- **Base colors** – Not changed; dark theme and green accent (e.g. `#1db954`) are kept as-is.

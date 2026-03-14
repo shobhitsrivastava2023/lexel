@@ -117,6 +117,29 @@
     --sidebar-ring: #1db954;
 }
 
+/* Dashboard card entrance: smooth fade-in with subtle slide (GPU-friendly) */
+@keyframes dashboard-card-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-dashboard-card-in {
+    animation: dashboard-card-in 500ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-dashboard-card-in {
+        animation-duration: 0.01ms;
+        animation-iteration-count: 1;
+    }
+}
+
 @layer base {
     * {
         @apply border-border outline-ring/50;

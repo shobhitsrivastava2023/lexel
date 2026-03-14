@@ -1,7 +1,11 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/landing(.*)",
+]);
 
 const isOrgSelectionRoute = createRouteMatcher(["/org-selection(.*)"]);
 
@@ -13,9 +17,16 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // Protect non-public routes
+  // Unauthenticated: send to landing (pages) or protect (API/trpc)
   if (!userId) {
-    await auth.protect();
+    const pathname = new URL(req.url).pathname;
+    const isApiOrTrpc =
+      pathname.startsWith("/api") || pathname.startsWith("/trpc");
+    if (isApiOrTrpc) {
+      await auth.protect();
+    } else {
+      return NextResponse.redirect(new URL("/landing", req.url));
+    }
   }
 
   // Allow org selection page
