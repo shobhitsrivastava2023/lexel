@@ -6,6 +6,7 @@ import { LiveTranslationPanel } from "@/features/dashboard/components/live-trans
 import { TextInputPanel } from "@/features/dashboard/components/text-input-panel";
 import { QuickActionsPanel } from "@/features/dashboard/components/quick-actions-panel";
 import { UserInfoCard } from "@/features/dashboard/components/user-info-card";
+import { DashboardBelowUsageSection } from "@/features/dashboard/components/dashboard-below-usage-section";
 
 export function DashboardView() {
   return (
@@ -154,6 +155,8 @@ export function DashboardView() {
             </div>
           </div>
         </section>
+
+        <DashboardBelowUsageSection />
       </div>
     </div>
   );

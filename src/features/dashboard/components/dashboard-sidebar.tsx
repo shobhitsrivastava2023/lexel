@@ -31,25 +31,31 @@ import {
   Volume2,
   Settings,
   Headphones,
-  Bot,
 } from "lucide-react";
 import Link from "next/link";
 import { UsageContainer } from "@/features/billing/components/usage-container";
+import { VoiceAgentNavIcon } from "@/features/dashboard/components/voice-agent-nav-icon";
 import { VoiceCreateDialog } from "@/features/voices/components/voice-create-dialog";
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
+
+type NavIcon = LucideIcon | ComponentType<{ className?: string }>;
 
 interface MenuItem {
   title: string;
   url?: string;
-  icon: LucideIcon;
+  icon: NavIcon;
   onClick?: () => void;
-};
+}
 
 interface NavSectionProps {
   label?: string;
   items: MenuItem[];
   pathname: string;
 };
+
+function NavItemIcon({ icon: Icon }: { icon: NavIcon }) {
+  return <Icon className="size-4" />;
+}
 
 function NavSection({ label, items, pathname }: NavSectionProps) {
   return (
@@ -78,12 +84,12 @@ function NavSection({ label, items, pathname }: NavSectionProps) {
               >
                 {item.url ? (
                   <Link href={item.url}>
-                    <item.icon />
+                    <NavItemIcon icon={item.icon} />
                     <span>{item.title}</span>
                   </Link>
                 ) : (
                   <>
-                    <item.icon />
+                    <NavItemIcon icon={item.icon} />
                     <span>{item.title}</span>
                   </>
                 )}
@@ -120,7 +126,7 @@ export function DashboardSidebar() {
     {
       title: "Voice agent",
       url: "/voice-agent",
-      icon: Bot,
+      icon: VoiceAgentNavIcon,
     },
     {
       title: "Voice cloning",
