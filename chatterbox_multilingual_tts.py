@@ -1,22 +1,4 @@
-"""Chatterbox Multilingual TTS API - 23 languages with one voice on Modal.
 
-Keeps the original Chatterbox Turbo (chatterbox_tts.py) unchanged. This app
-uses ChatterboxMultilingualTTS so a single female (or any) reference voice
-can speak in 23 languages. Deploy separately and set CHATTERBOX_MULTILINGUAL_API_URL.
-
-Test locally:
-  modal run chatterbox_multilingual_tts.py \
-    --prompt "Hello, this is the multilingual voice." \
-    --voice-key "voices/system/<voice-id>" \
-    --language-id "en"
-
-CURL:
-  curl -X POST "https://<your-modal-endpoint>/generate" \\
-    -H "Content-Type: application/json" \\
-    -H "X-Api-Key: <your-api-key>" \\
-    -d '{"prompt": "Bonjour le monde.", "voice_key": "voices/system/<id>", "language_id": "fr"}' \\
-    --output output.wav
-"""
 
 import modal
 

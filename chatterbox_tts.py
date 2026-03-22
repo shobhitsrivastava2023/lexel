@@ -2,24 +2,6 @@
 
 import modal
 
-# Use this to add R2 tokens:
-# modal secret create cloudflare-r2 \
-#   AWS_ACCESS_KEY_ID=<r2-access-key-id> \
-#   AWS_SECRET_ACCESS_KEY=<r2-secret-access-key>
-
-# Use this to test locally:
-# modal run chatterbox_tts.py \
-#   --prompt "Hello from Chatterbox [chuckle]." \
-#   --voice-key "voices/system/<voice-id>"
-
-# Use this to test CURL:
-# curl -X POST "https://<your-modal-endpoint>/generate" \
-#   -H "Content-Type: application/json" \
-#   -H "X-Api-Key: <your-api-key>" \
-#   -d '{"prompt": "Hello from Chatterbox [chuckle].", "voice_key": "voices/system/<voice-id>"}' \
-#   --output output.wav
-
-# R2 cloud bucket mount (read-only, replaces Modal Volume)
 R2_BUCKET_NAME = "resonance-app"
 R2_ACCOUNT_ID = "d5077d6317198c3813faeeaba2dd8a32"
 R2_MOUNT_PATH = "/r2"

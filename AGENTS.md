@@ -143,6 +143,7 @@ Procedures use **orgProcedure** (requires Clerk userId + orgId) for dashboard op
 | Voice CRUD and R2 upload | `src/trpc/routers/voices.ts`, `src/app/api/voices/create/` |
 | Billing / subscription / usage | `src/features/billing/`, `src/trpc/routers/billing.ts`, `src/lib/polar.ts` |
 | TTS backend call | `src/lib/chatterbox-client.ts`, types in `src/types/chatterbox-api.d.ts` |
+| Voice agent (Fish + Gemini) | `src/app/(dashboard)/voice-agent/`, `src/app/api/voice-agent/`, `src/features/voice-agent/` — requires `FISH_API_KEY`, `GEMINI_API_KEY`; optional `FISH_TTS_BACKEND`, `FISH_TTS_PCM_SAMPLE_RATE`, `FISH_TTS_CHUNK_LENGTH` |
 | DB schema and migrations | `prisma/schema.prisma` |
 
 ---

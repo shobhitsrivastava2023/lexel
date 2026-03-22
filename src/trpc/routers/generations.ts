@@ -131,7 +131,7 @@ export const generationsRouter = createTRPCRouter({
         }
         if (!chatterboxMultilingual) {
           throw new TRPCError({
-            code: "FAILED_PRECONDITION",
+            code: "PRECONDITION_FAILED",
             message: "Multilingual TTS is not configured. Set CHATTERBOX_MULTILINGUAL_API_URL to enable 23-language support.",
           });
         }

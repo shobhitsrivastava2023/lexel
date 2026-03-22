@@ -27,7 +27,8 @@ function formatCurrency(cents: number): string {
 const chartConfig = {
   count: {
     label: "Generations",
-    color: "hsl(var(--chart-1))",
+    /** LEXEL / Spotify-style accent so the area reads clearly on dark cards */
+    color: "#1db954",
   },
 } satisfies ChartConfig;
 
@@ -150,12 +151,12 @@ export function UserInfoCard() {
                   <stop
                     offset="0%"
                     stopColor="var(--color-count)"
-                    stopOpacity={0.4}
+                    stopOpacity={0.55}
                   />
                   <stop
                     offset="100%"
                     stopColor="var(--color-count)"
-                    stopOpacity={0}
+                    stopOpacity={0.06}
                   />
                 </linearGradient>
               </defs>
@@ -181,7 +182,7 @@ export function UserInfoCard() {
                 type="monotone"
                 dataKey="count"
                 stroke="var(--color-count)"
-                strokeWidth={1.5}
+                strokeWidth={2}
                 fill="url(#fillCount)"
               />
             </AreaChart>

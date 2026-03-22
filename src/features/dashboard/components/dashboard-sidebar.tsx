@@ -31,6 +31,7 @@ import {
   Volume2,
   Settings,
   Headphones,
+  Bot,
 } from "lucide-react";
 import Link from "next/link";
 import { UsageContainer } from "@/features/billing/components/usage-container";
@@ -115,6 +116,11 @@ export function DashboardSidebar() {
       title: "Text to speech",
       url: "/text-to-speech",
       icon: AudioLines,
+    },
+    {
+      title: "Voice agent",
+      url: "/voice-agent",
+      icon: Bot,
     },
     {
       title: "Voice cloning",
