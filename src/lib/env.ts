@@ -22,10 +22,26 @@ export const env = createEnv({
     /**
      * Optional translation config.
      * When configured, the dashboard Live Translation panel will call this provider.
-     * Example: TRANSLATE_PROVIDER=deepl with TRANSLATE_DEEPL_API_KEY set.
+     * libretranslate = self-hosted or remote LibreTranslate (see LIBRETRANSLATE_URL).
+     * google = GOOGLE_TRANSLATE_API_KEY; deepl = TRANSLATE_DEEPL_API_KEY.
      */
-    TRANSLATE_PROVIDER: z.enum(["deepl"]).optional(),
+    TRANSLATE_PROVIDER: z.enum(["deepl", "google", "libretranslate"]).optional(),
     TRANSLATE_DEEPL_API_KEY: z.string().min(1).optional(),
+    /** Server-only API key for Google Cloud Translation API (enable "Cloud Translation API" in GCP). */
+    GOOGLE_TRANSLATE_API_KEY: z.string().min(1).optional(),
+    /** Base URL of LibreTranslate (no trailing slash required). Default: http://localhost:5000 */
+    LIBRETRANSLATE_URL: z
+      .string()
+      .url()
+      .optional()
+      .default("http://localhost:5000"),
+    /** Optional; only if the instance uses API keys (e.g. libretranslate.com). */
+    LIBRETRANSLATE_API_KEY: z.string().min(1).optional(),
+    /**
+     * Comma-separated multilingual language ids (e.g. en,es,fr) when LibreTranslate
+     * was started with --load-only. Restricts targets and updates the Live Translation UI.
+     */
+    LIBRETRANSLATE_LANGUAGE_IDS: z.string().min(1).optional(),
     /** Fish Audio API (voice agent realtime TTS). */
     FISH_API_KEY: z.string().min(1).optional(),
     /** Google AI Studio key for Gemini (voice agent). */

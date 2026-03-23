@@ -18,18 +18,65 @@ type LanguageOption = {
   label: string;
 };
 
-const languageOptions: LanguageOption[] = MULTILINGUAL_LANGUAGE_OPTIONS;
-
 export function LiveTranslationPanel() {
   const router = useRouter();
 
+  const [allowedTargetIds, setAllowedTargetIds] = useState<
+    MultilingualLanguageId[] | null
+  >(null);
+
   const [sourceLanguage, setSourceLanguage] = useState<string>("auto");
   const [targetLanguage, setTargetLanguage] =
-    useState<MultilingualLanguageId>("ja");
+    useState<MultilingualLanguageId>("en");
   const [sourceText, setSourceText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
   const [translateError, setTranslateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/translate/config");
+        const json = (await res.json()) as {
+          allowedTargetLanguageIds?: MultilingualLanguageId[] | null;
+        };
+        if (cancelled) return;
+        if (Array.isArray(json.allowedTargetLanguageIds)) {
+          setAllowedTargetIds(json.allowedTargetLanguageIds);
+        } else {
+          setAllowedTargetIds(null);
+        }
+      } catch {
+        if (!cancelled) setAllowedTargetIds(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const languageOptions: LanguageOption[] = useMemo(() => {
+    if (allowedTargetIds === null) {
+      return MULTILINGUAL_LANGUAGE_OPTIONS;
+    }
+    const allow = new Set(allowedTargetIds);
+    const filtered = MULTILINGUAL_LANGUAGE_OPTIONS.filter((o) =>
+      allow.has(o.value),
+    );
+    return filtered.length > 0 ? filtered : MULTILINGUAL_LANGUAGE_OPTIONS;
+  }, [allowedTargetIds]);
+
+  useEffect(() => {
+    if (languageOptions.length === 0) return;
+    const values = new Set(languageOptions.map((o) => o.value));
+    if (!values.has(targetLanguage)) {
+      setTargetLanguage(languageOptions[0]!.value);
+    }
+    if (sourceLanguage !== "auto" && !values.has(sourceLanguage as MultilingualLanguageId)) {
+      setSourceLanguage("auto");
+    }
+  }, [languageOptions, sourceLanguage, targetLanguage]);
 
   const sttLanguage = useMemo(() => {
     if (sourceLanguage === "auto") {
@@ -170,7 +217,7 @@ export function LiveTranslationPanel() {
                 Live translation
               </h2>
               <p className="text-xs text-muted-foreground">
-                Speak once, translate across 23 languages.
+                Speak once, translate in your configured languages.
               </p>
             </div>
           </div>
