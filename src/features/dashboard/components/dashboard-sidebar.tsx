@@ -36,7 +36,7 @@ import Link from "next/link";
 import { UsageContainer } from "@/features/billing/components/usage-container";
 import { VoiceAgentNavIcon } from "@/features/dashboard/components/voice-agent-nav-icon";
 import { VoiceCreateDialog } from "@/features/voices/components/voice-create-dialog";
-import { useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 
 type NavIcon = LucideIcon | ComponentType<{ className?: string }>;
 
@@ -106,6 +106,11 @@ export function DashboardSidebar() {
   const pathname = usePathname();
   const clerk = useClerk();
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const mainMenuItems: MenuItem[] = [
     {
@@ -172,29 +177,33 @@ export function DashboardSidebar() {
         </div>
         <SidebarMenu>
           <SidebarMenuItem>
-            <OrganizationSwitcher
-              hidePersonal
-              fallback={
-                <Skeleton
-                  className="h-8.5 w-full group-data-[collapsible=icon]:size-8 rounded-md border border-border bg-[#181818]"
-                />
-              }
-              appearance={{
-                elements: {
-                  rootBox: 
-                    "w-full! group-data-[collapsible=icon]:w-auto! group-data-[collapsible=icon]:flex! group-data-[collapsible=icon]:justify-center!",
-                  organizationSwitcherTrigger:
-                    "w-full! justify-between! bg-[#181818]! border! border-border/70! rounded-md! pl-1! pr-2! py-1! gap-3! group-data-[collapsible=icon]:w-auto! group-data-[collapsible=icon]:p-1! shadow-[0px_1px_1.5px_0px_rgba(0,0,0,0.6)]!",
-                  organizationPreview: "gap-2!",
-                  organizationPreviewAvatarBox: "size-6! rounded-sm!",
-                  organizationPreviewTextContainer: 
-                    "text-xs! tracking-tight! font-medium! text-muted-foreground! group-data-[collapsible=icon]:hidden!",
-                  organizationPreviewMainIdentifier: "text-[13px]!",
-                  organizationSwitcherTriggerIcon:
-                    "size-4! text-sidebar-foreground! group-data-[collapsible=icon]:hidden!",
-                },
-              }}
-            />
+            {isMounted ? (
+              <OrganizationSwitcher
+                hidePersonal
+                fallback={
+                  <Skeleton
+                    className="h-8.5 w-full group-data-[collapsible=icon]:size-8 rounded-md border border-border bg-[#181818]"
+                  />
+                }
+                appearance={{
+                  elements: {
+                    rootBox:
+                      "w-full! group-data-[collapsible=icon]:w-auto! group-data-[collapsible=icon]:flex! group-data-[collapsible=icon]:justify-center!",
+                    organizationSwitcherTrigger:
+                      "w-full! justify-between! bg-[#181818]! border! border-border/70! rounded-md! pl-1! pr-2! py-1! gap-3! group-data-[collapsible=icon]:w-auto! group-data-[collapsible=icon]:p-1! shadow-[0px_1px_1.5px_0px_rgba(0,0,0,0.6)]!",
+                    organizationPreview: "gap-2!",
+                    organizationPreviewAvatarBox: "size-6! rounded-sm!",
+                    organizationPreviewTextContainer:
+                      "text-xs! tracking-tight! font-medium! text-muted-foreground! group-data-[collapsible=icon]:hidden!",
+                    organizationPreviewMainIdentifier: "text-[13px]!",
+                    organizationSwitcherTriggerIcon:
+                      "size-4! text-sidebar-foreground! group-data-[collapsible=icon]:hidden!",
+                  },
+                }}
+              />
+            ) : (
+              <Skeleton className="h-8.5 w-full group-data-[collapsible=icon]:size-8 rounded-md border border-border bg-[#181818]" />
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
@@ -212,23 +221,28 @@ export function DashboardSidebar() {
         <UsageContainer />
         <SidebarMenu>
           <SidebarMenuItem>
-            <UserButton
-              showName
-              fallback={
-                <Skeleton className="h-8.5 w-full group-data-[collapsible=icon]:size-8 rounded-md border border-border bg-[#181818]" />
-              }
-              appearance={{
-                elements: {
-                  rootBox:
-                    "w-full! group-data-[collapsible=icon]:w-auto! group-data-[collapsible=icon]:flex! group-data-[collapsible=icon]:justify-center!",
-                  userButtonTrigger:
-                    "w-full! justify-between! bg-[#181818]! border! border-border/70! rounded-md! pl-1! pr-2! py-1! shadow-[0px_1px_1.5px_0px_rgba(0,0,0,0.6)]! group-data-[collapsible=icon]:w-auto! group-data-[collapsible=icon]:p-1! group-data-[collapsible=icon]:after:hidden! [--border:color-mix(in_srgb,transparent,var(--clerk-color-neutral,#ffffff)_15%)]!",
-                  userButtonBox: "flex-row-reverse! gap-2!",
-                  userButtonOuterIdentifier: "text-[13px]! tracking-tight! font-medium! text-muted-foreground! pl-0! group-data-[collapsible=icon]:hidden!",
-                  userButtonAvatarBox: "size-6!",
+            {isMounted ? (
+              <UserButton
+                showName
+                fallback={
+                  <Skeleton className="h-8.5 w-full group-data-[collapsible=icon]:size-8 rounded-md border border-border bg-[#181818]" />
                 }
-              }}
-            />
+                appearance={{
+                  elements: {
+                    rootBox:
+                      "w-full! group-data-[collapsible=icon]:w-auto! group-data-[collapsible=icon]:flex! group-data-[collapsible=icon]:justify-center!",
+                    userButtonTrigger:
+                      "w-full! justify-between! bg-[#181818]! border! border-border/70! rounded-md! pl-1! pr-2! py-1! shadow-[0px_1px_1.5px_0px_rgba(0,0,0,0.6)]! group-data-[collapsible=icon]:w-auto! group-data-[collapsible=icon]:p-1! group-data-[collapsible=icon]:after:hidden! [--border:color-mix(in_srgb,transparent,var(--clerk-color-neutral,#ffffff)_15%)]!",
+                    userButtonBox: "flex-row-reverse! gap-2!",
+                    userButtonOuterIdentifier:
+                      "text-[13px]! tracking-tight! font-medium! text-muted-foreground! pl-0! group-data-[collapsible=icon]:hidden!",
+                    userButtonAvatarBox: "size-6!",
+                  },
+                }}
+              />
+            ) : (
+              <Skeleton className="h-8.5 w-full group-data-[collapsible=icon]:size-8 rounded-md border border-border bg-[#181818]" />
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

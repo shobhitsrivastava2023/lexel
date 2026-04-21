@@ -1,10 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { RealtimeEvents } from "fish-audio";
+import OpenAI from "openai";
 import { z } from "zod";
 
 import { env } from "@/lib/env";
 import { assertVoiceAgentSubscription, VoiceAgentSubscriptionError } from "@/lib/voice-agent-access";
+import {
+  executeComposioToolWithRetry,
+  OPENAI_COMPOSIO_TOOL,
+  parseExecuteToolArgs,
+} from "@/lib/voice-agent/composio";
 import {
   getFishTtsBackend,
   getFishTtsChunkLength,
@@ -87,18 +92,144 @@ function toGeminiHistory(
   }));
 }
 
+function toOpenAiMessages(
+  history: z.infer<typeof bodySchema>["history"],
+  userText: string,
+): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
+  const base: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = history.map(
+    (m) => ({
+      role: m.role,
+      content: m.content,
+    }),
+  );
+  base.push({
+    role: "user",
+    content: userText,
+  });
+  return base;
+}
+
+async function runOpenAiToolLoop({
+  client,
+  model,
+  messages,
+  userId,
+  maxSteps,
+  temperature,
+  write,
+}: {
+  client: OpenAI;
+  model: string;
+  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+  userId: string;
+  maxSteps: number;
+  temperature: number;
+  write: (obj: Record<string, unknown>) => void;
+}) {
+  const working = [...messages];
+
+  for (let step = 1; step <= maxSteps; step++) {
+    const result = await client.chat.completions.create({
+      model,
+      messages: working,
+      tools: [OPENAI_COMPOSIO_TOOL],
+      tool_choice: "auto",
+      temperature,
+      max_completion_tokens: 512,
+    });
+
+    const msg = result.choices[0]?.message;
+    const toolCalls =
+      msg?.tool_calls?.filter(
+        (call) =>
+          call.type === "function" &&
+          call.function?.name === OPENAI_COMPOSIO_TOOL.function.name,
+      ) ?? [];
+
+    if (!msg || toolCalls.length === 0) {
+      return working;
+    }
+
+    working.push({
+      role: "assistant",
+      content: msg.content ?? "",
+      tool_calls: toolCalls,
+    });
+
+    for (const toolCall of toolCalls) {
+      const toolCallId = toolCall.id;
+      const rawArgs = toolCall.function.arguments ?? "{}";
+
+      let toolContent: string;
+      try {
+        const parsedArgs = parseExecuteToolArgs(rawArgs);
+        write({
+          type: "tool_status",
+          status: "start",
+          tool: parsedArgs.slug,
+          step,
+        });
+
+        const toolResult = await executeComposioToolWithRetry(userId, parsedArgs);
+        toolContent = JSON.stringify({
+          successful: toolResult.successful,
+          error: toolResult.error,
+          data: toolResult.data,
+        });
+
+        write({
+          type: "tool_status",
+          status: toolResult.successful ? "success" : "error",
+          tool: parsedArgs.slug,
+          step,
+          message: toolResult.error ?? null,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Tool execution failed unexpectedly.";
+        toolContent = JSON.stringify({
+          successful: false,
+          error: message,
+        });
+        write({
+          type: "tool_status",
+          status: "error",
+          tool: "composio_execute_tool",
+          step,
+          message,
+        });
+      }
+
+      working.push({
+        role: "tool",
+        tool_call_id: toolCallId,
+        content: toolContent,
+      });
+    }
+  }
+
+  write({
+    type: "tool_status",
+    status: "error",
+    tool: "composio_execute_tool",
+    message: "Reached maximum tool-call steps; finalizing answer with current context.",
+  });
+  return working;
+}
+
 /** Avoid dumping multi-kB API payloads into the UI / logs. */
 function formatVoiceAgentError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
   if (
-    /429|Too Many Requests|quota|RESOURCE_EXHAUSTED|Resource has been exhausted|free_tier|GenerateContent/i.test(
+    /429|Too Many Requests|quota|RESOURCE_EXHAUSTED|Resource has been exhausted|free_tier|GenerateContent|insufficient_quota|rate limit/i.test(
       raw,
     )
   ) {
     return (
-      "Gemini quota exceeded (429). Free tier limits were hit for this model. " +
-      "Wait and retry, set GEMINI_MODEL to another model (e.g. gemini-1.5-flash-8b), " +
-      "or enable billing / upgrade in Google AI Studio."
+      "LLM quota exceeded (429). Wait and retry, switch to a cheaper model, " +
+      "or enable billing on your provider."
     );
   }
   if (raw.length > 400) {
@@ -162,18 +293,36 @@ async function bufferGeminiIntoPhrases(
   }
 }
 
+function toBufferChunk(chunk: unknown): Buffer | null {
+  if (chunk instanceof Uint8Array) return Buffer.from(chunk);
+  if (chunk instanceof ArrayBuffer) return Buffer.from(chunk);
+  if (ArrayBuffer.isView(chunk)) {
+    const view = chunk as ArrayBufferView;
+    return Buffer.from(view.buffer, view.byteOffset, view.byteLength);
+  }
+  if (typeof Buffer !== "undefined" && Buffer.isBuffer(chunk)) {
+    return chunk as Buffer;
+  }
+  return null;
+}
+
 export async function POST(request: Request) {
   const { userId, orgId } = await auth();
   if (!userId || !orgId) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const llmProvider = env.VOICE_AGENT_LLM_PROVIDER;
+  const openAiKey = env.OPENAI_API_KEY;
   const geminiKey = env.GEMINI_API_KEY;
-  if (!env.FISH_API_KEY || !geminiKey) {
+  const hasProviderKey =
+    llmProvider === "openai" ? Boolean(openAiKey) : Boolean(geminiKey);
+  if (!env.FISH_API_KEY || !hasProviderKey) {
     return Response.json(
       {
-        error:
-          "Voice agent is not configured. Set FISH_API_KEY and GEMINI_API_KEY.",
+        error: `Voice agent is not configured. Set FISH_API_KEY and ${
+          llmProvider === "openai" ? "OPENAI_API_KEY" : "GEMINI_API_KEY"
+        }.`,
       },
       { status: 503 },
     );
@@ -258,59 +407,124 @@ export async function POST(request: Request) {
 
         const onAudio = (audio: unknown) => {
           if (signal.aborted) return;
-          let buf: Buffer;
-          if (audio instanceof Uint8Array) {
-            buf = Buffer.from(audio);
-          } else if (typeof Buffer !== "undefined" && Buffer.isBuffer(audio)) {
-            buf = audio as Buffer;
-          } else {
-            return;
-          }
+          const buf = toBufferChunk(audio);
+          if (!buf || buf.length === 0) return;
+          realtimeAudioChunks += 1;
           write({
             type: "audio",
             b64: buf.toString("base64"),
           });
         };
 
+        let realtimeAudioChunks = 0;
+        let realtimeErrorMessage: string | null = null;
         const onFishError = (err: unknown) => {
           const message =
             err instanceof Error ? err.message : "Fish Audio connection error";
+          realtimeErrorMessage = message;
           write({ type: "error", message });
         };
 
         connection.on(RealtimeEvents.AUDIO_CHUNK, onAudio);
         connection.on(RealtimeEvents.ERROR, onFishError);
 
-        const genAI = new GoogleGenerativeAI(geminiKey);
-        const modelId = env.GEMINI_MODEL ?? "gemini-2.0-flash";
-        const model = genAI.getGenerativeModel({
-          model: modelId,
-          systemInstruction: [
-            "You are a voice assistant: replies are spoken aloud via TTS.",
-            "Keep answers SHORT by default: at most 2 sentences, or roughly 40 words.",
-            "For simple questions, one short sentence is enough.",
-            "Only give longer explanations if the user clearly asks for detail, steps, or a list.",
-            "No markdown, bullets, or headings unless the user explicitly wants a list.",
-            "Sound natural and conversational.",
-          ].join(" "),
-          generationConfig: {
-            temperature: body.geminiTemperature ?? 0.7,
-            /** Hard cap so replies stay cheap and quick to speak (raise in code if you need more). */
-            maxOutputTokens: 256,
-          },
-        });
+        const systemInstruction = [
+          "You are a voice assistant: replies are spoken aloud via TTS.",
+          "Keep answers SHORT by default: at most 2 sentences, or roughly 40 words.",
+          "For simple questions, one short sentence is enough.",
+          "Only give longer explanations if the user clearly asks for detail, steps, or a list.",
+          "No markdown, bullets, or headings unless the user explicitly wants a list.",
+          "Sound natural and conversational.",
+        ].join(" ");
+        let assistantText = "";
 
-        const geminiHistory = toGeminiHistory(body.history);
-        const chat = model.startChat({ history: geminiHistory });
-        const result = await chat.sendMessageStream(body.userText);
+        if (llmProvider === "openai") {
+          const client = new OpenAI({ apiKey: openAiKey! });
+          const modelId = env.OPENAI_MODEL ?? "gpt-4o-mini";
 
-        await bufferGeminiIntoPhrases(
-          result.stream,
-          signal,
-          chunkLength,
-          (phrase) => phraseQueue.push(phrase),
-          (delta) => write({ type: "assistant_delta", text: delta }),
-        );
+          const baseMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+            {
+              role: "system",
+              content: [
+                systemInstruction,
+                "You can use tools through Composio for Notion, Google Docs, and Google Drive.",
+                "Use tools only when they are required to complete the user request.",
+                "Support multi-step execution: if one tool's output is needed for the next action, call tools in sequence.",
+              ].join(" "),
+            },
+            ...toOpenAiMessages(body.history, body.userText),
+          ];
+
+          const temperature = body.geminiTemperature ?? 0.7;
+          const maxToolSteps = env.VOICE_AGENT_TOOL_MAX_STEPS ?? 4;
+
+          const toolMessages = env.COMPOSIO_API_KEY
+            ? await runOpenAiToolLoop({
+              client,
+              model: modelId,
+              messages: baseMessages,
+              userId,
+              maxSteps: maxToolSteps,
+              temperature,
+              write,
+            })
+            : baseMessages;
+
+          const stream = await client.chat.completions.create({
+            model: modelId,
+            messages: toolMessages,
+            temperature,
+            max_completion_tokens: 256,
+            stream: true,
+          });
+
+          async function* openAiTextStream() {
+            for await (const chunk of stream) {
+              const t = chunk.choices[0]?.delta?.content;
+              if (!t) continue;
+              yield { text: () => t };
+            }
+          }
+
+          await bufferGeminiIntoPhrases(
+            openAiTextStream(),
+            signal,
+            chunkLength,
+            (phrase) => phraseQueue.push(phrase),
+            (delta) => {
+              assistantText += delta;
+              write({ type: "assistant_delta", text: delta });
+            },
+          );
+        } else {
+          // Gemini path kept for compatibility if explicitly selected.
+          const { GoogleGenerativeAI } = await import("@google/generative-ai");
+          const genAI = new GoogleGenerativeAI(geminiKey!);
+          const modelId = env.GEMINI_MODEL ?? "gemini-2.0-flash";
+          const model = genAI.getGenerativeModel({
+            model: modelId,
+            systemInstruction,
+            generationConfig: {
+              temperature: body.geminiTemperature ?? 0.7,
+              maxOutputTokens: 256,
+            },
+          });
+
+          const geminiHistory = toGeminiHistory(body.history);
+          const chat = model.startChat({ history: geminiHistory });
+          const result = await chat.sendMessageStream(body.userText);
+
+          await bufferGeminiIntoPhrases(
+            result.stream,
+            signal,
+            chunkLength,
+            (phrase) => phraseQueue.push(phrase),
+            (delta) => {
+              assistantText += delta;
+              write({ type: "assistant_delta", text: delta });
+            },
+          );
+        }
 
         phraseQueue.close();
 
@@ -322,6 +536,63 @@ export async function POST(request: Request) {
         signal.removeEventListener("abort", onAbort);
         connection.off(RealtimeEvents.AUDIO_CHUNK, onAudio);
         connection.off(RealtimeEvents.ERROR, onFishError);
+
+        // WebSocket can fail with proxy redirects (e.g. 302) while text still streams.
+        // Fallback to one-shot TTS so users still hear audio.
+        if (!signal.aborted && assistantText.trim() && realtimeAudioChunks === 0) {
+          try {
+            if (realtimeErrorMessage) {
+              write({
+                type: "error",
+                message:
+                  "Realtime Fish audio failed; using fallback synthesis. " +
+                  realtimeErrorMessage,
+              });
+            }
+
+            const fallbackAudio = await fishClient.textToSpeech.convert(
+              {
+                text: assistantText,
+                reference_id: body.referenceId,
+                format: "pcm",
+                sample_rate: pcmSampleRate,
+                chunk_length: chunkLength,
+                normalize: true,
+                latency: "balanced",
+                temperature: body.fishTemperature ?? 0.65,
+              },
+              backend,
+            );
+
+            if (fallbackAudio instanceof ReadableStream) {
+              const reader = fallbackAudio.getReader();
+              for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const buf = toBufferChunk(value);
+                if (!buf || buf.length === 0) continue;
+                write({ type: "audio", b64: buf.toString("base64") });
+              }
+            } else if (
+              fallbackAudio &&
+              typeof fallbackAudio === "object" &&
+              Symbol.asyncIterator in fallbackAudio
+            ) {
+              for await (const chunk of fallbackAudio as AsyncIterable<unknown>) {
+                const buf = toBufferChunk(chunk);
+                if (!buf || buf.length === 0) continue;
+                write({ type: "audio", b64: buf.toString("base64") });
+              }
+            } else {
+              const buf = toBufferChunk(fallbackAudio);
+              if (buf && buf.length > 0) {
+                write({ type: "audio", b64: buf.toString("base64") });
+              }
+            }
+          } catch (fallbackErr) {
+            write({ type: "error", message: formatVoiceAgentError(fallbackErr) });
+          }
+        }
 
         if (!signal.aborted) {
           write({ type: "done" });

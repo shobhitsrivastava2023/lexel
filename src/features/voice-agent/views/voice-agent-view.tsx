@@ -189,6 +189,7 @@ export function VoiceAgentView() {
 
       let assistantAccum = "";
       let sawDone = false;
+      let audioChunkCount = 0;
 
       flushSync(() => {
         setLines((prev) => [...prev, { role: "user", text: userText }]);
@@ -216,7 +217,20 @@ export function VoiceAgentView() {
         } else if (type === "audio" && typeof msg.b64 === "string") {
           await player.ensureRunning();
           const bytes = base64ToUint8Array(msg.b64 as string);
+          if (bytes.length > 0) {
+            audioChunkCount += 1;
+          }
           player.pushPcmBytes(bytes);
+        } else if (type === "tool_status" && typeof msg.status === "string") {
+          const tool = typeof msg.tool === "string" ? msg.tool : "tool";
+          const detail = typeof msg.message === "string" ? msg.message : null;
+          if (msg.status === "start") {
+            toast.info(`Running ${tool}...`);
+          } else if (msg.status === "success") {
+            toast.success(`Completed ${tool}.`);
+          } else if (msg.status === "error") {
+            toast.error(detail ? `${tool}: ${detail}` : `Failed: ${tool}`);
+          }
         } else if (type === "error") {
           toast.error(
             typeof msg.message === "string"
@@ -254,7 +268,7 @@ export function VoiceAgentView() {
           } else if (res.status === 503) {
             toast.error(
               errBody.error ??
-                "Voice agent is not configured (Fish / Gemini keys).",
+                "Voice agent is not configured (Fish / LLM keys).",
             );
           } else {
             toast.error(errBody.error ?? "Request failed.");
@@ -317,6 +331,11 @@ export function VoiceAgentView() {
             { role: "user" as const, content: userText },
             { role: "assistant" as const, content: assistantAccum },
           ].slice(-24);
+        }
+        if (assistantAccum.trim() && audioChunkCount === 0) {
+          toast.error(
+            "No audio stream was returned by Fish for this reply. Try another Fish voice or backend.",
+          );
         }
       } catch (e) {
         if (e instanceof DOMException && e.name === "AbortError") {
@@ -599,11 +618,11 @@ export function VoiceAgentView() {
                 Experimental
               </p>
               <h2 className="text-lg font-semibold tracking-tight">
-                Fish Audio + Gemini
+                Fish Audio + OpenAI
               </h2>
               <p className="max-w-xl text-sm text-muted-foreground">
-                Continuous speech recognition streams your words to Gemini
-                (2.0 Flash), then Fish Audio realtime TTS speaks the reply.
+                Continuous speech recognition streams your words to OpenAI,
+                then Fish Audio realtime TTS speaks the reply.
                 Recognition pauses while the agent speaks to reduce echo—use
                 headphones for the best experience.
               </p>
@@ -755,7 +774,7 @@ export function VoiceAgentView() {
               <p className="text-sm text-muted-foreground">
                 {configured
                   ? "Press Initialize and start talking."
-                  : "Configure FISH_API_KEY and GEMINI_API_KEY, then load voices."}
+                  : "Configure FISH_API_KEY and OPENAI_API_KEY, then load voices."}
               </p>
             ) : (
               <ul className="space-y-3">

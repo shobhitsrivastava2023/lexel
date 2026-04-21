@@ -44,8 +44,20 @@ export const env = createEnv({
     LIBRETRANSLATE_LANGUAGE_IDS: z.string().min(1).optional(),
     /** Fish Audio API (voice agent realtime TTS). */
     FISH_API_KEY: z.string().min(1).optional(),
+    /** OpenAI API key for the voice-agent chat model (recommended). */
+    OPENAI_API_KEY: z.string().min(1).optional(),
+    /** OpenAI chat model id (default: gpt-4o-mini). */
+    OPENAI_MODEL: z.string().min(1).optional(),
+    /** Optional Composio API key for third-party tool calling from voice agent. */
+    COMPOSIO_API_KEY: z.string().min(1).optional(),
+    /** Optional default connected account id for Composio tool execution. */
+    COMPOSIO_CONNECTED_ACCOUNT_ID: z.string().min(1).optional(),
+    /** Max multi-step tool execution rounds per voice-agent request. */
+    VOICE_AGENT_TOOL_MAX_STEPS: z.coerce.number().int().min(1).max(8).optional(),
     /** Google AI Studio key for Gemini (voice agent). */
     GEMINI_API_KEY: z.string().min(1).optional(),
+    /** Voice-agent LLM provider. */
+    VOICE_AGENT_LLM_PROVIDER: z.enum(["openai", "gemini"]).optional().default("openai"),
     /** Fish realtime TTS backend header (`model`). See fish-audio SDK `Backends`. */
     FISH_TTS_BACKEND: z
       .enum(["speech-1.5", "speech-1.6", "agent-x0", "s1", "s1-mini"])
