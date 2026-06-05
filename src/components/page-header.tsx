@@ -15,25 +15,27 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex items-center justify-between border-b px-4 py-4",
+        "flex min-w-0 items-center justify-between gap-2 border-b px-3 py-3 sm:px-4 sm:py-4",
         className,
       )}
     >
-      <div className="flex items-center gap-2">
-        <SidebarTrigger />
-        <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+      <div className="flex min-w-0 items-center gap-2">
+        <SidebarTrigger className="size-9 shrink-0 sm:size-7" />
+        <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">
+          {title}
+        </h1>
       </div>
-      <div className="flex items-center gap-3">
-         <Button variant="outline" size="sm" asChild>
-            <Link href="mailto:business@codewithantonio.com">
-              <ThumbsUp />
-              <span className="hidden lg:block">Feedback</span>
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+         <Button variant="outline" size="icon-sm" className="size-9 sm:size-8" asChild>
+            <Link href="mailto:business@codewithantonio.com" aria-label="Send feedback">
+              <ThumbsUp className="size-4" />
+              <span className="sr-only">Feedback</span>
             </Link>
          </Button>
-         <Button variant="outline" size="sm" asChild>
-          <Link href="mailto:business@codewithantonio.com">
-            <Headphones />
-            <span className="hidden lg:block">Need help?</span>
+         <Button variant="outline" size="icon-sm" className="hidden size-9 sm:inline-flex sm:size-8" asChild>
+          <Link href="mailto:business@codewithantonio.com" aria-label="Need help">
+            <Headphones className="size-4" />
+            <span className="sr-only">Need help</span>
           </Link>
         </Button>
       </div>

@@ -9,6 +9,10 @@ import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
 import { useAppForm } from "@/hooks/use-app-form";
 import { useCheckout } from "@/features/billing/hooks/use-checkout";
+import {
+  EPHEMERAL_GENERATION_STORAGE_KEY,
+  type EphemeralGenerationPayload,
+} from "@/lib/ephemeral-generation";
 
 const ttsFormSchema = z.object({
   text: z.string().min(1, "Please enter some text"),
@@ -71,6 +75,27 @@ export function TextToSpeechForm({
         });
 
         toast.success("Audio generated successfully!");
+
+        if ("ephemeral" in data && data.ephemeral && data.audioDataUrl) {
+          const payload: EphemeralGenerationPayload = {
+            id: data.id,
+            text: data.text,
+            voiceName: data.voiceName,
+            audioDataUrl: data.audioDataUrl,
+            temperature: data.temperature,
+            topP: data.topP,
+            topK: data.topK,
+            repetitionPenalty: data.repetitionPenalty,
+            createdAt: new Date().toISOString(),
+          };
+          sessionStorage.setItem(
+            EPHEMERAL_GENERATION_STORAGE_KEY,
+            JSON.stringify(payload),
+          );
+          router.push("/text-to-speech/ephemeral");
+          return;
+        }
+
         router.push(`/text-to-speech/${data.id}`);
       } catch (error) {
         const message =

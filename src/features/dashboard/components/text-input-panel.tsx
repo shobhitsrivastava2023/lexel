@@ -35,10 +35,10 @@ export function TextInputPanel() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
         <Badge
           variant="outline"
-          className="gap-1.5 border-border/50 bg-transparent px-2.5 py-1 text-[11px] font-medium text-muted-foreground/90"
+          className="w-fit gap-1.5 border-border/50 bg-transparent px-2.5 py-1 text-[11px] font-medium text-muted-foreground/90"
         >
           <Coins className="size-3 text-primary" />
           {text.length === 0 ? (
@@ -59,10 +59,10 @@ export function TextInputPanel() {
 
       <div className="pt-1">
         <Button
-          size="sm"
+          size="default"
           disabled={!text.trim()}
           onClick={handleGenerate}
-          className="w-full rounded-full px-6 font-medium transition-opacity hover:opacity-95 lg:w-auto"
+          className="h-11 w-full rounded-full px-6 font-medium transition-opacity hover:opacity-95 sm:h-9 lg:w-auto"
         >
           Generate speech
         </Button>

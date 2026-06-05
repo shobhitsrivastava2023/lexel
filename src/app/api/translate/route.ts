@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { parseGuestKeysFromHeaders } from "@/lib/guest-keys/codec";
+import { runWithGuestKeys } from "@/lib/guest-keys/runtime";
 import { translateText, TranslationConfigError } from "@/lib/translate";
 import {
   MULTILINGUAL_LANGUAGE_IDS,
@@ -38,12 +40,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const guestKeys = parseGuestKeysFromHeaders(request.headers);
+
   try {
-    const translatedText = await translateText({
-      text,
-      sourceLang,
-      targetLang: normalizedTarget,
-    });
+    const translatedText = await runWithGuestKeys(guestKeys, () =>
+      translateText({
+        text,
+        sourceLang,
+        targetLang: normalizedTarget,
+        guestKeys,
+      }),
+    );
 
     return Response.json({ translatedText });
   } catch (error) {

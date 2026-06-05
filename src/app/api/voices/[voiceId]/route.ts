@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAppAuth } from "@/lib/clerk-app-auth";
 import { prisma } from "@/lib/db";
 import { getSignedAudioUrl } from "@/lib/r2";
 
@@ -6,7 +6,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ voiceId: string }> },
 ) {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await getAppAuth();
 
   if (!userId || !orgId) {
     return new Response("Unauthorized", { status: 401 });

@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { guestFetch } from "@/lib/guest-keys/client-fetch";
 import { cn } from "@/lib/utils";
 
 import { PcmStreamPlayer, base64ToUint8Array } from "../lib/pcm-player";
@@ -84,7 +85,7 @@ export function VoiceAgentView() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/voice-agent/voices");
+        const res = await guestFetch("/api/voice-agent/voices");
         const data = (await res.json()) as {
           items?: FishVoiceItem[];
           error?: string;
@@ -248,7 +249,7 @@ export function VoiceAgentView() {
       };
 
       try {
-        const res = await fetch("/api/voice-agent/chat", {
+        const res = await guestFetch("/api/voice-agent/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: ac.signal,

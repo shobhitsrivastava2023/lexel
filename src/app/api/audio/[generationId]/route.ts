@@ -1,15 +1,27 @@
-import { auth } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/db";
+import { getAppAuth } from "@/lib/clerk-app-auth";
+import { isPersistenceConfigured } from "@/lib/app-config";
+import { getPrismaClient } from "@/lib/db";
 import { getSignedAudioUrl } from "@/lib/r2";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ generationId: string }> },
 ) {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await getAppAuth();
 
   if (!userId || !orgId) {
     return new Response("Unauthorized", { status: 401 });
+  }
+
+  if (!isPersistenceConfigured()) {
+    return new Response("Persistence is not configured on this deployment", {
+      status: 503,
+    });
+  }
+
+  const prisma = getPrismaClient();
+  if (!prisma) {
+    return new Response("Database is not configured", { status: 503 });
   }
 
   const { generationId } = await params;

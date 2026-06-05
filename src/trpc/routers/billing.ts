@@ -1,19 +1,28 @@
 import { TRPCError } from "@trpc/server";
-import { polar } from "@/lib/polar";
+import { getAppUrl } from "@/lib/app-config";
+import { getPolarClient } from "@/lib/polar";
 import { env } from "@/lib/env";
-import { isSubscriptionBypassEnabled } from "@/lib/subscription-access";
+import { isSubscriptionBypassedForRequest } from "@/lib/subscription-access";
 import { createTRPCRouter, orgProcedure } from "../init";
 
 export const billingRouter = createTRPCRouter({
   createCheckout: orgProcedure.mutation(async ({ ctx }) => {
-    if (isSubscriptionBypassEnabled()) {
-      return { checkoutUrl: process.env.APP_URL ?? env.APP_URL };
+    if (await isSubscriptionBypassedForRequest()) {
+      return { checkoutUrl: getAppUrl() };
+    }
+
+    const polar = getPolarClient();
+    if (!polar || !env.POLAR_PRODUCT_ID) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Billing is not configured on this deployment.",
+      });
     }
 
     const result = await polar.checkouts.create({
       products: [env.POLAR_PRODUCT_ID],
       externalCustomerId: ctx.orgId,
-      successUrl: process.env.APP_URL,
+      successUrl: getAppUrl(),
     });
 
     if (!result.url) {
@@ -27,8 +36,16 @@ export const billingRouter = createTRPCRouter({
   }),
 
   createPortalSession: orgProcedure.mutation(async ({ ctx }) => {
-    if (isSubscriptionBypassEnabled()) {
-      return { portalUrl: process.env.APP_URL ?? env.APP_URL };
+    if (await isSubscriptionBypassedForRequest()) {
+      return { portalUrl: getAppUrl() };
+    }
+
+    const polar = getPolarClient();
+    if (!polar) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Billing is not configured on this deployment.",
+      });
     }
 
     const result = await polar.customerSessions.create({
@@ -46,12 +63,22 @@ export const billingRouter = createTRPCRouter({
   }),
 
   getStatus: orgProcedure.query(async ({ ctx }) => {
-    if (isSubscriptionBypassEnabled()) {
+    if (await isSubscriptionBypassedForRequest()) {
       return {
         hasActiveSubscription: true,
         customerId: null,
         estimatedCostCents: 0,
         subscriptionBypassed: true,
+      };
+    }
+
+    const polar = getPolarClient();
+    if (!polar) {
+      return {
+        hasActiveSubscription: false,
+        customerId: null,
+        estimatedCostCents: 0,
+        subscriptionBypassed: false,
       };
     }
 

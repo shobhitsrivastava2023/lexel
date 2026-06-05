@@ -1,5 +1,22 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
+
+import { GUEST_COOKIE_NAME } from "@/lib/guest-keys/codec";
+
+function isClerkAuthBypassed() {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    process.env.DISABLE_CLERK_AUTH === "true"
+  );
+}
+
+function isByokDemoDeployment() {
+  return !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+}
+
+function isGuestSession(req: NextRequest) {
+  return req.cookies.get(GUEST_COOKIE_NAME)?.value === "1";
+}
 
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
@@ -9,15 +26,33 @@ const isPublicRoute = createRouteMatcher([
 
 const isOrgSelectionRoute = createRouteMatcher(["/org-selection(.*)"]);
 
-export default clerkMiddleware(async (auth, req) => {
+function demoGuestMiddleware(req: NextRequest) {
+  if (isGuestSession(req) || isPublicRoute(req)) {
+    return NextResponse.next();
+  }
+
+  const pathname = new URL(req.url).pathname;
+  const isApiOrTrpc =
+    pathname.startsWith("/api") || pathname.startsWith("/trpc");
+
+  if (isApiOrTrpc) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  return NextResponse.redirect(new URL("/landing", req.url));
+}
+
+const clerkProtected = clerkMiddleware(async (auth, req) => {
+  if (isClerkAuthBypassed() || isGuestSession(req)) {
+    return NextResponse.next();
+  }
+
   const { userId, orgId } = await auth();
 
-  // Allow public routes
   if (isPublicRoute(req)) {
     return NextResponse.next();
   }
 
-  // Unauthenticated: send to landing (pages) or protect (API/trpc)
   if (!userId) {
     const pathname = new URL(req.url).pathname;
     const isApiOrTrpc =
@@ -29,25 +64,27 @@ export default clerkMiddleware(async (auth, req) => {
     }
   }
 
-  // Allow org selection page
   if (isOrgSelectionRoute(req)) {
     return NextResponse.next();
   }
 
-  // For all protected routes, ensure org is selected
   if (userId && !orgId) {
-    const orgSelection = new URL("/org-selection", req.url);
-    return NextResponse.redirect(orgSelection);
+    return NextResponse.redirect(new URL("/org-selection", req.url));
   }
 
   return NextResponse.next();
 });
 
+export default function proxy(req: NextRequest, event: NextFetchEvent) {
+  if (isByokDemoDeployment()) {
+    return demoGuestMiddleware(req);
+  }
+  return clerkProtected(req, event);
+}
+
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
-    '/(api|trpc)(.*)',
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
   ],
 };

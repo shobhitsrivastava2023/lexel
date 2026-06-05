@@ -1,8 +1,8 @@
 import { polar } from "@/lib/polar";
-import { isSubscriptionBypassEnabled } from "@/lib/subscription-access";
+import { isSubscriptionBypassedForRequest } from "@/lib/subscription-access";
 
 export async function assertVoiceAgentSubscription(orgId: string) {
-  if (isSubscriptionBypassEnabled()) {
+  if (await isSubscriptionBypassedForRequest()) {
     return;
   }
 

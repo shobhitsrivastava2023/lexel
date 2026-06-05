@@ -5,6 +5,11 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import { createTRPCContext } from '@trpc/tanstack-react-query';
 import { useState } from 'react';
+import { encodeGuestKeys, GUEST_KEYS_HEADER } from "@/lib/guest-keys/codec";
+import {
+  loadGuestKeysFromStorage,
+  loadGuestModeFromStorage,
+} from "@/lib/guest-keys/client-storage";
 import { makeQueryClient } from './query-client';
 import type { AppRouter } from './routers/_app';
 import superjson from "superjson";
@@ -46,6 +51,14 @@ export function TRPCReactProvider(
         httpBatchLink({
           transformer: superjson,
           url: getUrl(),
+          headers() {
+            if (!loadGuestModeFromStorage()) return {};
+            const keys = loadGuestKeysFromStorage();
+            if (Object.keys(keys).length === 0) return {};
+            return {
+              [GUEST_KEYS_HEADER]: encodeGuestKeys(keys),
+            };
+          },
         }),
       ],
     }),

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 export function DashboardBelowUsageSection() {
   return (
     <section
-      className="animate-dashboard-card-in rounded-2xl border border-border/60 bg-[#0f0f0f]/95 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset] px-5 py-5 lg:px-6 lg:py-6"
+      className="animate-dashboard-card-in min-w-0 rounded-2xl border border-border/60 bg-[#0f0f0f]/95 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset] px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6"
       style={{ animationDelay: "600ms" }}
     >
       <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -30,7 +30,7 @@ export function DashboardBelowUsageSection() {
         </Button>
       </div>
 
-      <div className="grid gap-4 border-t border-border/50 pt-5 md:grid-cols-3">
+      <div className="grid gap-3 border-t border-border/50 pt-4 sm:gap-4 sm:pt-5 md:grid-cols-2 lg:grid-cols-3">
         <div className="flex gap-3 rounded-xl border border-white/6 bg-black/25 p-4">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#1db954]/15 text-[#1db954]">
             <Mic className="size-4" />

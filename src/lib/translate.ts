@@ -1,4 +1,6 @@
 import { env } from "@/lib/env";
+import { effectiveGuestValue } from "@/lib/guest-keys/runtime";
+import type { GuestKeys } from "@/lib/guest-keys/types";
 import { getLibreTranslateAllowedLanguageIds } from "@/lib/translate-config";
 import {
   MULTILINGUAL_LANGUAGE_IDS,
@@ -13,12 +15,25 @@ type TranslateParams = {
 
 export class TranslationConfigError extends Error {}
 
+function resolveTranslateProvider(guestKeys?: Partial<GuestKeys> | null) {
+  const raw = effectiveGuestValue(
+    "TRANSLATE_PROVIDER",
+    env.TRANSLATE_PROVIDER,
+    guestKeys,
+  );
+  if (raw === "deepl" || raw === "google" || raw === "libretranslate") {
+    return raw;
+  }
+  return undefined;
+}
+
 export async function translateText({
   text,
   sourceLang,
   targetLang,
-}: TranslateParams): Promise<string> {
-  const provider = env.TRANSLATE_PROVIDER;
+  guestKeys,
+}: TranslateParams & { guestKeys?: Partial<GuestKeys> | null }): Promise<string> {
+  const provider = resolveTranslateProvider(guestKeys);
 
   if (!provider) {
     throw new TranslationConfigError(
@@ -30,7 +45,7 @@ export async function translateText({
     throw new Error(`Unsupported target language: ${targetLang}`);
   }
 
-  const libreAllowed = getLibreTranslateAllowedLanguageIds();
+  const libreAllowed = getLibreTranslateAllowedLanguageIds(guestKeys);
   if (libreAllowed && !libreAllowed.includes(targetLang)) {
     throw new Error(
       `Target language "${targetLang}" is not enabled for LibreTranslate. Update LIBRETRANSLATE_LANGUAGE_IDS or load more language models.`,
@@ -39,11 +54,11 @@ export async function translateText({
 
   switch (provider) {
     case "deepl":
-      return translateWithDeepL({ text, sourceLang, targetLang });
+      return translateWithDeepL({ text, sourceLang, targetLang, guestKeys });
     case "google":
-      return translateWithGoogle({ text, sourceLang, targetLang });
+      return translateWithGoogle({ text, sourceLang, targetLang, guestKeys });
     case "libretranslate":
-      return translateWithLibreTranslate({ text, sourceLang, targetLang });
+      return translateWithLibreTranslate({ text, sourceLang, targetLang, guestKeys });
     default:
       // Type guard, should never happen due to zod enum
       throw new TranslationConfigError(
@@ -84,8 +99,13 @@ async function translateWithDeepL({
   text,
   sourceLang,
   targetLang,
-}: TranslateParams): Promise<string> {
-  const apiKey = env.TRANSLATE_DEEPL_API_KEY;
+  guestKeys,
+}: TranslateParams & { guestKeys?: Partial<GuestKeys> | null }): Promise<string> {
+  const apiKey = effectiveGuestValue(
+    "TRANSLATE_DEEPL_API_KEY",
+    env.TRANSLATE_DEEPL_API_KEY,
+    guestKeys,
+  );
 
   if (!apiKey) {
     throw new TranslationConfigError(
@@ -175,8 +195,13 @@ async function translateWithGoogle({
   text,
   sourceLang,
   targetLang,
-}: TranslateParams): Promise<string> {
-  const apiKey = env.GOOGLE_TRANSLATE_API_KEY;
+  guestKeys,
+}: TranslateParams & { guestKeys?: Partial<GuestKeys> | null }): Promise<string> {
+  const apiKey = effectiveGuestValue(
+    "GOOGLE_TRANSLATE_API_KEY",
+    env.GOOGLE_TRANSLATE_API_KEY,
+    guestKeys,
+  );
 
   if (!apiKey) {
     throw new TranslationConfigError(
@@ -262,8 +287,14 @@ const libreTranslateLangMap: Record<MultilingualLanguageId, string> = {
   zh: "zh",
 };
 
-function libreTranslateEndpoint(): string {
-  const base = env.LIBRETRANSLATE_URL.replace(/\/+$/, "");
+function libreTranslateEndpoint(guestKeys?: Partial<GuestKeys> | null): string {
+  const base = (
+    effectiveGuestValue(
+      "LIBRETRANSLATE_URL",
+      env.LIBRETRANSLATE_URL,
+      guestKeys,
+    ) ?? "http://localhost:5000"
+  ).replace(/\/+$/, "");
   return `${base}/translate`;
 }
 
@@ -271,7 +302,8 @@ async function translateWithLibreTranslate({
   text,
   sourceLang,
   targetLang,
-}: TranslateParams): Promise<string> {
+  guestKeys,
+}: TranslateParams & { guestKeys?: Partial<GuestKeys> | null }): Promise<string> {
   const targetCode = libreTranslateLangMap[targetLang];
 
   const body: {
@@ -296,12 +328,16 @@ async function translateWithLibreTranslate({
     }
   }
 
-  const apiKey = env.LIBRETRANSLATE_API_KEY;
+  const apiKey = effectiveGuestValue(
+    "LIBRETRANSLATE_API_KEY",
+    env.LIBRETRANSLATE_API_KEY,
+    guestKeys,
+  );
   if (apiKey) {
     body.api_key = apiKey;
   }
 
-  const res = await fetch(libreTranslateEndpoint(), {
+  const res = await fetch(libreTranslateEndpoint(guestKeys), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

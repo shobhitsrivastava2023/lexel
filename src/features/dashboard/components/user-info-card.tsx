@@ -89,10 +89,10 @@ export function UserInfoCard() {
   }
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-[#0f0f0f]/95 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]">
-      <div className="px-5 py-5 lg:px-6 lg:py-6">
+    <div className="min-w-0 rounded-2xl border border-border/60 bg-[#0f0f0f]/95 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]">
+      <div className="px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
         <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground/90">
               Usage & activity
             </p>
@@ -135,7 +135,7 @@ export function UserInfoCard() {
           <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
             Last 7 days
           </p>
-          <ChartContainer config={chartConfig} className="h-40 w-full">
+          <ChartContainer config={chartConfig} className="h-36 w-full min-w-0 sm:h-40">
             <AreaChart
               data={chartData}
               margin={{ top: 4, right: 4, left: 0, bottom: 0 }}

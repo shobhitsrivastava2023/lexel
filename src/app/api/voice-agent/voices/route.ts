@@ -1,4 +1,6 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAppAuth } from "@/lib/clerk-app-auth";
+import { parseGuestKeysFromHeaders } from "@/lib/guest-keys/codec";
+import { effectiveGuestValue, runWithGuestKeys } from "@/lib/guest-keys/runtime";
 
 import { env } from "@/lib/env";
 import {
@@ -21,13 +23,17 @@ function isAllowedAgentVoiceTitle(title: string): boolean {
   return ALLOWED_VOICE_TITLE.test(title.trim());
 }
 
-export async function GET() {
-  const { userId, orgId } = await auth();
+export async function GET(request: Request) {
+  const guestKeys = parseGuestKeysFromHeaders(request.headers);
+
+  return runWithGuestKeys(guestKeys, async () => {
+  const { userId, orgId } = await getAppAuth();
   if (!userId || !orgId) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  if (!env.FISH_API_KEY) {
+  const fishApiKey = effectiveGuestValue("FISH_API_KEY", env.FISH_API_KEY);
+  if (!fishApiKey) {
     return Response.json(
       { error: "FISH_API_KEY is not configured", items: [] },
       { status: 503 },
@@ -101,4 +107,5 @@ export async function GET() {
     const message = e instanceof Error ? e.message : "Failed to list voices";
     return Response.json({ error: message, items: [] }, { status: 502 });
   }
+  });
 }

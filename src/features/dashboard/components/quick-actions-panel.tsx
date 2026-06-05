@@ -41,13 +41,15 @@ export function QuickActionsPanel() {
   };
 
   return (
-    <div className="space-y-3.5">
-      <h2 className="text-lg font-semibold tracking-tight">Quick actions</h2>
+    <div className="min-w-0 space-y-3.5">
+      <h2 className="text-base font-semibold tracking-tight sm:text-lg">
+        Quick actions
+      </h2>
       <div
         ref={scrollRef}
-        className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
       >
-        <div className="flex min-w-max gap-4">
+        <div className="flex min-w-max gap-3 sm:gap-4">
           {quickActions.map((action) => (
             <QuickActionCard
               key={action.title}
@@ -59,17 +61,17 @@ export function QuickActionsPanel() {
           ))}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         <Button
           type="button"
           size="icon"
           variant="ghost"
           onClick={() => scrollByAmount(-1)}
           disabled={!canScrollPrev}
-          className="size-6 rounded-full border border-white/10 bg-white/5 text-foreground/85 transition-colors hover:bg-white/10 disabled:opacity-35"
+          className="size-9 rounded-full border border-white/10 bg-white/5 text-foreground/85 transition-colors hover:bg-white/10 disabled:opacity-35 sm:size-8"
           aria-label="Scroll quick actions left"
         >
-          <ChevronLeft className="size-3.5" />
+          <ChevronLeft className="size-4 sm:size-3.5" />
         </Button>
         <div className="relative h-2 flex-1 rounded-full bg-white/[0.08]">
           <div
@@ -86,10 +88,10 @@ export function QuickActionsPanel() {
           variant="ghost"
           onClick={() => scrollByAmount(1)}
           disabled={!canScrollNext}
-          className="size-6 rounded-full border border-white/10 bg-white/5 text-foreground/85 transition-colors hover:bg-white/10 disabled:opacity-35"
+          className="size-9 rounded-full border border-white/10 bg-white/5 text-foreground/85 transition-colors hover:bg-white/10 disabled:opacity-35 sm:size-8"
           aria-label="Scroll quick actions right"
         >
-          <ChevronRight className="size-3.5" />
+          <ChevronRight className="size-4 sm:size-3.5" />
         </Button>
       </div>
     </div>

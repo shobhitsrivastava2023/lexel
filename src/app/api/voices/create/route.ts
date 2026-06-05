@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAppAuth } from "@/lib/clerk-app-auth";
 import { parseBuffer } from "music-metadata";
 import { z } from "zod";
 import { polar } from "@/lib/polar";
@@ -20,7 +20,7 @@ const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 const MIN_AUDIO_DURATION_SECONDS = 10;
 
 export async function POST(request: Request) {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await getAppAuth();
 
   if (!userId || !orgId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });

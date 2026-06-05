@@ -1,17 +1,17 @@
 import Image from "next/image";
-import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
-import { env } from "@/lib/env";
+import { LandingActions } from "@/features/landing/components/landing-actions";
+import { getAppUrl, isByokDemoDeployment } from "@/lib/app-config";
 
 export function LandingHero() {
-  const signInUrl = `/sign-in?redirect_url=${encodeURIComponent(env.APP_URL + "/")}`;
+  const signInUrl = `/sign-in?redirect_url=${encodeURIComponent(`${getAppUrl()}/`)}`;
+  const showSignIn = !isByokDemoDeployment();
 
   return (
     <div className="relative flex min-h-screen flex-col bg-background">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-radial-[circle_at_top,rgba(250,250,250,0.06),transparent_50%]" />
 
-      <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center gap-10 px-4 py-16">
+      <div className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center gap-8 px-4 py-12 sm:gap-10 sm:px-6 sm:py-16">
         <div className="flex flex-col items-center gap-8 text-center">
           <div className="relative h-14 w-32">
             <Image
@@ -35,19 +35,8 @@ export function LandingHero() {
             </p>
           </div>
 
-          <div className="flex flex-col items-center gap-3 sm:flex-row">
-            <Button asChild size="lg" className="h-11 px-8">
-              <Link href={signInUrl}>Sign in</Link>
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              New here?{" "}
-              <Link
-                href="/sign-up"
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                Sign up
-              </Link>
-            </span>
+          <div className="flex w-full flex-col items-center gap-3">
+            <LandingActions signInUrl={signInUrl} showSignIn={showSignIn} />
           </div>
         </div>
 

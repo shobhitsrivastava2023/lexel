@@ -1,9 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAppAuth } from "@/lib/clerk-app-auth";
 import { RealtimeEvents } from "fish-audio";
 import OpenAI from "openai";
 import { z } from "zod";
 
 import { env } from "@/lib/env";
+import { parseGuestKeysFromHeaders } from "@/lib/guest-keys/codec";
+import { effectiveGuestValue, runWithGuestKeys } from "@/lib/guest-keys/runtime";
 import { assertVoiceAgentSubscription, VoiceAgentSubscriptionError } from "@/lib/voice-agent-access";
 import {
   executeComposioToolWithRetry,
@@ -157,6 +159,7 @@ async function runOpenAiToolLoop({
     });
 
     for (const toolCall of toolCalls) {
+      if (toolCall.type !== "function" || !toolCall.function) continue;
       const toolCallId = toolCall.id;
       const rawArgs = toolCall.function.arguments ?? "{}";
 
@@ -307,17 +310,25 @@ function toBufferChunk(chunk: unknown): Buffer | null {
 }
 
 export async function POST(request: Request) {
-  const { userId, orgId } = await auth();
+  const guestKeys = parseGuestKeysFromHeaders(request.headers);
+
+  return runWithGuestKeys(guestKeys, async () => {
+  const { userId, orgId } = await getAppAuth();
   if (!userId || !orgId) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const llmProvider = env.VOICE_AGENT_LLM_PROVIDER;
-  const openAiKey = env.OPENAI_API_KEY;
-  const geminiKey = env.GEMINI_API_KEY;
+  const llmProvider =
+    (effectiveGuestValue(
+      "VOICE_AGENT_LLM_PROVIDER",
+      env.VOICE_AGENT_LLM_PROVIDER,
+    ) as "openai" | "gemini" | undefined) ?? "openai";
+  const openAiKey = effectiveGuestValue("OPENAI_API_KEY", env.OPENAI_API_KEY);
+  const geminiKey = effectiveGuestValue("GEMINI_API_KEY", env.GEMINI_API_KEY);
+  const fishApiKey = effectiveGuestValue("FISH_API_KEY", env.FISH_API_KEY);
   const hasProviderKey =
     llmProvider === "openai" ? Boolean(openAiKey) : Boolean(geminiKey);
-  if (!env.FISH_API_KEY || !hasProviderKey) {
+  if (!fishApiKey || !hasProviderKey) {
     return Response.json(
       {
         error: `Voice agent is not configured. Set FISH_API_KEY and ${
@@ -440,7 +451,9 @@ export async function POST(request: Request) {
 
         if (llmProvider === "openai") {
           const client = new OpenAI({ apiKey: openAiKey! });
-          const modelId = env.OPENAI_MODEL ?? "gpt-4o-mini";
+          const modelId =
+            effectiveGuestValue("OPENAI_MODEL", env.OPENAI_MODEL) ??
+            "gpt-4o-mini";
 
           const baseMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
             {
@@ -500,7 +513,9 @@ export async function POST(request: Request) {
           // Gemini path kept for compatibility if explicitly selected.
           const { GoogleGenerativeAI } = await import("@google/generative-ai");
           const genAI = new GoogleGenerativeAI(geminiKey!);
-          const modelId = env.GEMINI_MODEL ?? "gemini-2.0-flash";
+          const modelId =
+            effectiveGuestValue("GEMINI_MODEL", env.GEMINI_MODEL) ??
+            "gemini-2.0-flash";
           const model = genAI.getGenerativeModel({
             model: modelId,
             systemInstruction,
@@ -611,5 +626,6 @@ export async function POST(request: Request) {
       "Content-Type": "application/x-ndjson; charset=utf-8",
       "Cache-Control": "no-store",
     },
+  });
   });
 }

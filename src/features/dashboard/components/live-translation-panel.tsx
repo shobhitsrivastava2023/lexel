@@ -11,6 +11,7 @@ import {
   MULTILINGUAL_LANGUAGE_OPTIONS,
   type MultilingualLanguageId,
 } from "@/features/text-to-speech/data/multilingual-languages";
+import { guestFetch } from "@/lib/guest-keys/client-fetch";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 
 type LanguageOption = {
@@ -37,7 +38,7 @@ export function LiveTranslationPanel() {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch("/api/translate/config");
+        const res = await guestFetch("/api/translate/config");
         const json = (await res.json()) as {
           allowedTargetLanguageIds?: MultilingualLanguageId[] | null;
         };
@@ -132,7 +133,7 @@ export function LiveTranslationPanel() {
       setIsTranslating(true);
       setTranslateError(null);
       try {
-        const res = await fetch("/api/translate", {
+        const res = await guestFetch("/api/translate", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -205,14 +206,14 @@ export function LiveTranslationPanel() {
   const showManualFallback = !isSupported;
 
   return (
-    <div className="rounded-3xl bg-linear-to-br from-[#1f1f1f] via-[#121212] to-black p-0.5 shadow-[0_16px_40px_rgba(0,0,0,0.6)]">
-      <div className="rounded-[22px] bg-[#181818] p-4 lg:p-5 border border-white/5 space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+    <div className="min-w-0 rounded-2xl bg-linear-to-br from-[#1f1f1f] via-[#121212] to-black p-0.5 shadow-[0_16px_40px_rgba(0,0,0,0.6)] sm:rounded-3xl">
+      <div className="space-y-4 rounded-[18px] border border-white/5 bg-[#181818] p-3.5 sm:rounded-[22px] sm:p-4 lg:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Languages className="size-4" />
             </span>
-            <div>
+            <div className="min-w-0">
               <h2 className="text-sm font-semibold tracking-tight">
                 Live translation
               </h2>
@@ -223,21 +224,21 @@ export function LiveTranslationPanel() {
           </div>
           <Badge
             variant="outline"
-            className="gap-1.5 border-dashed border-white/15 bg-white/5 text-[10px]"
+            className="w-fit shrink-0 gap-1.5 border-dashed border-white/15 bg-white/5 text-[10px]"
           >
             <Sparkles className="size-3 text-primary" />
             <span>Experimental</span>
           </Badge>
         </div>
 
-        <div className="flex flex-col gap-3 lg:flex-row">
-          <div className="flex-1 space-y-1.5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2">
+          <div className="min-w-0 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
+              <span className="shrink-0 text-xs font-medium text-muted-foreground">
                 From
               </span>
               <select
-                className="h-7 rounded-md border border-white/10 bg-black/40 px-2 text-xs text-foreground outline-none"
+                className="h-9 min-w-0 max-w-[65%] rounded-md border border-white/10 bg-black/40 px-2 text-xs text-foreground outline-none sm:h-8 sm:max-w-none"
                 value={sourceLanguage}
                 onChange={(e) => setSourceLanguage(e.target.value)}
               >
@@ -250,13 +251,13 @@ export function LiveTranslationPanel() {
               </select>
             </div>
           </div>
-          <div className="flex-1 space-y-1.5">
+          <div className="min-w-0 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
+              <span className="shrink-0 text-xs font-medium text-muted-foreground">
                 To
               </span>
               <select
-                className="h-7 rounded-md border border-white/10 bg-black/40 px-2 text-xs text-foreground outline-none"
+                className="h-9 min-w-0 max-w-[65%] rounded-md border border-white/10 bg-black/40 px-2 text-xs text-foreground outline-none sm:h-8 sm:max-w-none"
                 value={targetLanguage}
                 onChange={(e) =>
                   setTargetLanguage(e.target.value as MultilingualLanguageId)
@@ -321,15 +322,15 @@ export function LiveTranslationPanel() {
           </p>
         )}
 
-        <div className="flex flex-col gap-2 pt-1.5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 pt-1.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-2.5 sm:items-center">
             <Button
               type="button"
               size="icon"
               variant={isRecording ? "destructive" : "outline"}
               disabled={!isSupported}
               onClick={handleToggleRecording}
-              className="rounded-full"
+              className="size-10 shrink-0 rounded-full sm:size-9"
             >
               {isRecording ? (
                 <MicOff className="size-4" />
@@ -337,24 +338,22 @@ export function LiveTranslationPanel() {
                 <Mic className="size-4" />
               )}
             </Button>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-[11px] leading-relaxed text-muted-foreground">
               {isSupported
                 ? "Browser speech recognition (best in Chrome)."
                 : "Speech recognition not supported in this browser. Type instead."}
             </span>
           </div>
-          <div className="flex items-center gap-2 lg:justify-end">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={!translatedText.trim()}
-              onClick={handleSendToTTS}
-              className="rounded-full px-4 text-xs"
-            >
-              Send to TTS
-            </Button>
-          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={!translatedText.trim()}
+            onClick={handleSendToTTS}
+            className="h-10 w-full shrink-0 rounded-full px-4 text-xs sm:h-9 sm:w-auto"
+          >
+            Send to TTS
+          </Button>
         </div>
       </div>
     </div>

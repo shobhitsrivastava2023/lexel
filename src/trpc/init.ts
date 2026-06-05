@@ -1,19 +1,28 @@
 import * as Sentry from "@sentry/node";
-import { auth } from '@clerk/nextjs/server';
 import { initTRPC, TRPCError } from '@trpc/server';
-import { cache } from 'react';
+import { getAppAuth } from "@/lib/clerk-app-auth";
+import { parseGuestKeysFromHeaders } from "@/lib/guest-keys/codec";
+import { runWithGuestKeys } from "@/lib/guest-keys/runtime";
+import type { GuestKeys } from "@/lib/guest-keys/types";
 import superjson from "superjson";
-export const createTRPCContext = cache(async () => {
-  /**
-   * @see: https://trpc.io/docs/server/context
-   */
-  return {};
-});
+
+export type TRPCContext = {
+  guestKeys: Partial<GuestKeys>;
+};
+
+export async function createTRPCContext(opts?: {
+  req?: Request;
+}): Promise<TRPCContext> {
+  const guestKeys = opts?.req
+    ? parseGuestKeysFromHeaders(opts.req.headers)
+    : {};
+  return { guestKeys };
+}
 // Avoid exporting the entire t-object
 // since it's not very descriptive.
 // For instance, the use of a t variable
 // is common in i18n libraries.
-const t = initTRPC.create({
+const t = initTRPC.context<TRPCContext>().create({
   /**
    * @see https://trpc.io/docs/server/data-transformers
    */
@@ -29,24 +38,31 @@ const sentryMiddleware = t.middleware(
 // Base router and procedure helpers
 export const createTRPCRouter = t.router;
 export const createCallerFactory = t.createCallerFactory;
-export const baseProcedure = t.procedure.use(sentryMiddleware);
+
+const guestKeysMiddleware = t.middleware(async ({ ctx, next }) => {
+  return runWithGuestKeys(ctx.guestKeys, () => next({ ctx }));
+});
+
+export const baseProcedure = t.procedure
+  .use(sentryMiddleware)
+  .use(guestKeysMiddleware);
 
 // Authenticated procedure - calls auth() only when needed
-export const authProcedure = baseProcedure.use(async ({ next }) => {
-  const { userId } = await auth();
+export const authProcedure = baseProcedure.use(async ({ ctx, next }) => {
+  const { userId } = await getAppAuth();
 
   if (!userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
   return next({
-    ctx: { userId },
+    ctx: { ...ctx, userId },
   });
 });
 
 // Organization procedure - requires userId and orgId
-export const orgProcedure = baseProcedure.use(async ({ next }) => {
-  const { userId, orgId } = await auth();
+export const orgProcedure = baseProcedure.use(async ({ ctx, next }) => {
+  const { userId, orgId } = await getAppAuth();
 
   if (!userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
@@ -59,5 +75,5 @@ export const orgProcedure = baseProcedure.use(async ({ next }) => {
     });
   }
 
-  return next({ ctx: { userId, orgId } });
+  return next({ ctx: { ...ctx, userId, orgId } });
 });
