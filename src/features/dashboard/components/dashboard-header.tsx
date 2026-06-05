@@ -5,8 +5,24 @@ import { Headphones, ThumbsUp } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { isClerkConfiguredClient } from "@/lib/clerk-client";
 
-export function DashboardHeader() {
+function DashboardHeaderGuest() {
+  return (
+    <div className="flex min-w-0 items-start justify-between gap-3">
+      <div className="min-w-0 space-y-1">
+        <p className="text-xs text-muted-foreground sm:text-sm">
+          Guest session
+        </p>
+        <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
+          Welcome
+        </h1>
+      </div>
+    </div>
+  );
+}
+
+function DashboardHeaderClerk() {
   const { isLoaded, user } = useUser();
 
   return (
@@ -20,7 +36,7 @@ export function DashboardHeader() {
         </h1>
       </div>
 
-      <div className="lg:flex items-center gap-3 hidden">
+      <div className="hidden items-center gap-3 lg:flex">
         <Button variant="outline" size="sm" asChild>
           <Link href="mailto:business@codewithantonio.com">
             <ThumbsUp />
@@ -34,8 +50,13 @@ export function DashboardHeader() {
           </Link>
         </Button>
       </div>
-
-      
     </div>
   );
-};
+}
+
+export function DashboardHeader() {
+  if (!isClerkConfiguredClient()) {
+    return <DashboardHeaderGuest />;
+  }
+  return <DashboardHeaderClerk />;
+}

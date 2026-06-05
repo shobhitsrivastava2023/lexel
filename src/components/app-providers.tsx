@@ -7,7 +7,8 @@ import { GuestKeysProvider } from "@/features/guest/components/guest-keys-provid
 import { TRPCReactProvider } from "@/trpc/client";
 
 export function AppProviders({ children }: { children: ReactNode }) {
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+  const publishableKey =
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() || undefined;
 
   const inner = (
     <GuestKeysProvider>

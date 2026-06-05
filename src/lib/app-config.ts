@@ -1,8 +1,12 @@
 import { env } from "@/lib/env";
 
+export function isClerkConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
+}
+
 /** True when this deployment is a public BYOK demo (no Clerk keys on the host). */
 export function isByokDemoDeployment() {
-  return !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+  return !isClerkConfigured();
 }
 
 export function getAppUrl() {

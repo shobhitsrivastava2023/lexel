@@ -18,10 +18,10 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
+import {
   OrganizationSwitcher,
   UserButton,
-  useClerk
+  useClerk,
 } from "@clerk/nextjs";
 import {
   type LucideIcon,
@@ -31,12 +31,16 @@ import {
   Volume2,
   Settings,
   Headphones,
+  KeyRound,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState, type ComponentType } from "react";
+
 import { UsageContainer } from "@/features/billing/components/usage-container";
 import { VoiceAgentNavIcon } from "@/features/dashboard/components/voice-agent-nav-icon";
 import { VoiceCreateDialog } from "@/features/voices/components/voice-create-dialog";
-import { useEffect, useState, type ComponentType } from "react";
+import { GuestContinueDialog } from "@/features/guest/components/guest-continue-dialog";
+import { isClerkConfiguredClient } from "@/lib/clerk-client";
 
 type NavIcon = LucideIcon | ComponentType<{ className?: string }>;
 
@@ -51,7 +55,7 @@ interface NavSectionProps {
   label?: string;
   items: MenuItem[];
   pathname: string;
-};
+}
 
 function NavItemIcon({ icon: Icon }: { icon: NavIcon }) {
   return <Icon className="size-4" />;
@@ -102,7 +106,121 @@ function NavSection({ label, items, pathname }: NavSectionProps) {
   );
 }
 
-export function DashboardSidebar() {
+function SidebarShell({
+  pathname,
+  voiceDialogOpen,
+  setVoiceDialogOpen,
+  mainMenuItems,
+  othersMenuItems,
+  headerSlot,
+  footerSlot,
+}: {
+  pathname: string;
+  voiceDialogOpen: boolean;
+  setVoiceDialogOpen: (open: boolean) => void;
+  mainMenuItems: MenuItem[];
+  othersMenuItems: MenuItem[];
+  headerSlot: React.ReactNode;
+  footerSlot: React.ReactNode;
+}) {
+  return (
+    <>
+      <VoiceCreateDialog
+        open={voiceDialogOpen}
+        onOpenChange={setVoiceDialogOpen}
+      />
+      <Sidebar side="right" collapsible="icon">
+        <SidebarHeader className="flex flex-col gap-4 pt-4">
+          <div className="flex items-center gap-2 pl-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:pl-0">
+            <Image
+              src="/lexel/logo.jpg"
+              alt="LEXEL"
+              width={24}
+              height={24}
+              className="rounded-sm object-cover"
+            />
+            <span className="group-data-[collapsible=icon]:hidden font-semibold text-lg tracking-tighter text-foreground">
+              LEXEL
+            </span>
+            <SidebarTrigger className="ml-auto lg:hidden" />
+          </div>
+          {headerSlot}
+        </SidebarHeader>
+        <div className="border-b border-dashed border-border" />
+        <SidebarContent>
+          <NavSection items={mainMenuItems} pathname={pathname} />
+          <NavSection label="Others" items={othersMenuItems} pathname={pathname} />
+        </SidebarContent>
+        <div className="border-b border-dashed border-border" />
+        <SidebarFooter className="gap-3 py-3">
+          <UsageContainer />
+          {footerSlot}
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+    </>
+  );
+}
+
+function DashboardSidebarGuest() {
+  const pathname = usePathname();
+  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
+  const [keysDialogOpen, setKeysDialogOpen] = useState(false);
+
+  const mainMenuItems: MenuItem[] = [
+    { title: "Dashboard", url: "/", icon: Home },
+    { title: "Explore voices", url: "/voices", icon: LayoutGrid },
+    { title: "Text to speech", url: "/text-to-speech", icon: AudioLines },
+    { title: "Voice agent", url: "/voice-agent", icon: VoiceAgentNavIcon },
+    {
+      title: "Voice cloning",
+      icon: Volume2,
+      onClick: () => setVoiceDialogOpen(true),
+    },
+  ];
+
+  const othersMenuItems: MenuItem[] = [
+    {
+      title: "API keys",
+      icon: KeyRound,
+      onClick: () => setKeysDialogOpen(true),
+    },
+    {
+      title: "Help and support",
+      url: "mailto:business@codewithantonio.com",
+      icon: Headphones,
+    },
+  ];
+
+  return (
+    <>
+      <SidebarShell
+        pathname={pathname}
+        voiceDialogOpen={voiceDialogOpen}
+        setVoiceDialogOpen={setVoiceDialogOpen}
+        mainMenuItems={mainMenuItems}
+        othersMenuItems={othersMenuItems}
+        headerSlot={
+          <div className="rounded-md border border-border/70 bg-[#181818] px-3 py-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+            BYOK guest session
+          </div>
+        }
+        footerSlot={
+          <div className="rounded-md border border-border/70 bg-[#181818] px-3 py-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+            Signed in as guest
+          </div>
+        }
+      />
+      <GuestContinueDialog
+        open={keysDialogOpen}
+        onOpenChange={setKeysDialogOpen}
+        redirectOnSave={false}
+      />
+    </>
+  );
+}
+
+function DashboardSidebarClerk() {
   const pathname = usePathname();
   const clerk = useClerk();
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
@@ -113,26 +231,10 @@ export function DashboardSidebar() {
   }, []);
 
   const mainMenuItems: MenuItem[] = [
-    {
-      title: "Dashboard",
-      url: "/",
-      icon: Home,
-    },
-    {
-      title: "Explore voices",
-      url: "/voices",
-      icon: LayoutGrid,
-    },
-    {
-      title: "Text to speech",
-      url: "/text-to-speech",
-      icon: AudioLines,
-    },
-    {
-      title: "Voice agent",
-      url: "/voice-agent",
-      icon: VoiceAgentNavIcon,
-    },
+    { title: "Dashboard", url: "/", icon: Home },
+    { title: "Explore voices", url: "/voices", icon: LayoutGrid },
+    { title: "Text to speech", url: "/text-to-speech", icon: AudioLines },
+    { title: "Voice agent", url: "/voice-agent", icon: VoiceAgentNavIcon },
     {
       title: "Voice cloning",
       icon: Volume2,
@@ -154,36 +256,20 @@ export function DashboardSidebar() {
   ];
 
   return (
-    <>
-    <VoiceCreateDialog
-      open={voiceDialogOpen}
-      onOpenChange={setVoiceDialogOpen}
-    />
-    <Sidebar side="right" collapsible="icon">
-      <SidebarHeader className="flex flex-col gap-4 pt-4">
-        <div 
-        className="flex items-center gap-2 pl-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:pl-0">
-          <Image
-            src="/lexel/logo.jpg"
-            alt="LEXEL"
-            width={24}
-            height={24}
-            className="rounded-sm object-cover"
-          />
-          <span className="group-data-[collapsible=icon]:hidden font-semibold text-lg tracking-tighter text-foreground">
-            LEXEL
-          </span>
-          <SidebarTrigger className="ml-auto lg:hidden" />
-        </div>
+    <SidebarShell
+      pathname={pathname}
+      voiceDialogOpen={voiceDialogOpen}
+      setVoiceDialogOpen={setVoiceDialogOpen}
+      mainMenuItems={mainMenuItems}
+      othersMenuItems={othersMenuItems}
+      headerSlot={
         <SidebarMenu>
           <SidebarMenuItem>
             {isMounted ? (
               <OrganizationSwitcher
                 hidePersonal
                 fallback={
-                  <Skeleton
-                    className="h-8.5 w-full group-data-[collapsible=icon]:size-8 rounded-md border border-border bg-[#181818]"
-                  />
+                  <Skeleton className="h-8.5 w-full group-data-[collapsible=icon]:size-8 rounded-md border border-border bg-[#181818]" />
                 }
                 appearance={{
                   elements: {
@@ -206,19 +292,8 @@ export function DashboardSidebar() {
             )}
           </SidebarMenuItem>
         </SidebarMenu>
-      </SidebarHeader>
-      <div className="border-b border-dashed border-border" />
-      <SidebarContent>
-        <NavSection items={mainMenuItems} pathname={pathname} />
-        <NavSection
-          label="Others"
-          items={othersMenuItems}
-          pathname={pathname}
-        />
-      </SidebarContent>
-      <div className="border-b border-dashed border-border" />
-      <SidebarFooter className="gap-3 py-3">
-        <UsageContainer />
+      }
+      footerSlot={
         <SidebarMenu>
           <SidebarMenuItem>
             {isMounted ? (
@@ -245,9 +320,14 @@ export function DashboardSidebar() {
             )}
           </SidebarMenuItem>
         </SidebarMenu>
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
-    </>
+      }
+    />
   );
+}
+
+export function DashboardSidebar() {
+  if (!isClerkConfiguredClient()) {
+    return <DashboardSidebarGuest />;
+  }
+  return <DashboardSidebarClerk />;
 }
